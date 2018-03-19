@@ -27,60 +27,66 @@ dependencies {
 
 
 ```
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OnQrScanned {
 
-    //Location permission request code
-    private static final int REQUEST_LOCATION_PERMISSION_CODE = 101;
+    private static final int REQUEST_CAMERA_PERMISSION_CODE = 101;
+    private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
 
-    //Declaring speed alert object to start tracking movement speed and play alerts
-    private SpeedAlert mSpeedAlert;
-
+    //Surface view used to show camera preview.
+    SurfaceView surfaceView;
+    //Text view to show result of qr after scanning.
+    TextView resultTv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Instantiating speed alert with context and max speed.
-        mSpeedAlert = new SpeedAlert(this, 10);
+        surfaceView = (SurfaceView) findViewById(R.id.camera_preview);
+        resultTv = (TextView) findViewById(R.id.result_tv);
 
-        /*Setting alert mode and file, if not set a default alert will be played*/
+        //Initializing qr with context, SurfaceView and OnQrScanned object.
+        QrReader.init(this, surfaceView, this);
 
-        //Setting alert mode to play from local file
-        mSpeedAlert.setAlertMode(AlertPlayer.Mode.DataFromLocalFile);
-        //Setting file resource
-        mSpeedAlert.setAlertResource(R.raw.alert);
+        /*Qr scanner uses the camera , so the camera permission must be added to manifest and requested at runtime*/
 
-        //Setting alert mode to play from a url
-        //mSpeedAlert.setAlertMode(AlertPlayer.Mode.DataFromUrl);
-        //Setting url of the file
-        //mSpeedAlert.setAlertUrl("http://www.freesfx.co.uk/rx2/mp3s/5/16927_1461333031.mp3");
-
-        /*Speed alert is based on GPS, so the location permission must be added to manifest and requested at runtime*/
-
-        //Checking if location permission is granted
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            //Start tracking movement speed by giving location & speed minimum update time and distance. (time is seconds, distance in meters)
-            mSpeedAlert.startTracking(1, 1);
+        //Checking if camera permission is granted.
+        if (ActivityCompat.checkSelfPermission(this, CAMERA_PERMISSION) == PackageManager.PERMISSION_GRANTED) {
+            //Start scanning
+            QrReader.scan();
         } else {
-            //If location permission is not granted request it.
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION},REQUEST_LOCATION_PERMISSION_CODE);
+            //Request camera permission.
+            ActivityCompat.requestPermissions(this, new String[]{CAMERA_PERMISSION}, REQUEST_CAMERA_PERMISSION_CODE);
         }
+
     }
 
     //Called when user respond to requesting permissions.
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-
-        //If location permission is granted start tracking.
-        if(requestCode == REQUEST_LOCATION_PERMISSION_CODE) {
-            if(grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                //Start tracking movement speed by giving location & speed minimum update time and distance. (time is seconds, distance in meters)
-                mSpeedAlert.startTracking(1, 1);
-            } else {
-                Toast.makeText(this, "Location permission required", Toast.LENGTH_SHORT).show();
+        if (requestCode == REQUEST_CAMERA_PERMISSION_CODE) {
+            //If camera permission is granted start the scanner.
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                //Start camera preview
+                QrReader.startPreview();
+                //Start scanning
+                QrReader.scan();
             }
         }
+    }
+
+    //Method implemented from OnQrScanned
+    @Override
+    public void onResult(final String barcodeValue) {
+        resultTv.post(new Runnable() {
+            @Override
+            public void run() {
+                //Setting Qr value to textView
+                resultTv.setText(barcodeValue);
+                //Stop scanning
+                QrReader.release();
+            }
+        });
     }
   }
 ```
