@@ -18,7 +18,7 @@ Step 2. Add the dependency:
 
 ```
 dependencies {
-	        compile 'com.github.YaraAHakiim:QrScanner:1.0.0'
+	        compile 'com.github.YaraAHakiim:QrScanner:1.0.2'
 	}
 ```
 
